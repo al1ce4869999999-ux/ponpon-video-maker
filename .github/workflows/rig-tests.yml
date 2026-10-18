@@ -11,6 +11,8 @@ on:
       - 'analyzer.js'
       - 'test_*.js'
       - 'test_v05_browser.py'
+      - 'test_safari_diagnostics.py'
+      - 'safari-diagnostics.html'
       - '.github/workflows/rig-tests.yml'
   workflow_dispatch:
 permissions:
@@ -48,3 +50,9 @@ jobs:
         env:
           PONPON_BROWSER: webkit
         run: python test_v05_browser.py
+      - name: Safari diagnostic Chromium
+        run: python test_safari_diagnostics.py
+      - name: Safari diagnostic WebKit
+        env:
+          PONPON_BROWSER: webkit
+        run: python test_safari_diagnostics.py
