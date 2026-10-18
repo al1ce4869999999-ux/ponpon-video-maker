@@ -65,6 +65,25 @@ try:
         print('PASS browser video export and ffmpeg decode:',video.name,video.stat().st_size)
     else:
         print('SKIP browser video export: MediaRecorder MIME unsupported')
+    # 3-cut mixed rig / classic export: exercise transition boundaries.
+    page.evaluate("""() => {
+      state.cuts = state.cuts.slice(0,3);
+      state.cuts.forEach((c,i) => {c.duration=2; c.transition=i===1?'wipe':i===2?'fade':'cut';});
+      state.cuts[0].useRig=true;state.cuts[0].rigId=state.rigs[0].id;state.cuts[0].rigMotion='nod';
+      state.cuts[1].useRig=false;
+      state.cuts[2].useRig=true;state.cuts[2].rigId=state.rigs[0].id;state.cuts[2].rigMotion='tail_wag';
+      updateStats();
+    }""")
+    page.locator('#export-part').select_option('all')
+    if supports:
+        with page.expect_download(timeout=25000) as export:
+            page.locator('#record').click()
+        mixed=ROOT/('v05-mixed'+Path(export.value.suggested_filename).suffix)
+        export.value.save_as(str(mixed))
+        assert mixed.stat().st_size>2000
+        decoded=subprocess.run(['ffmpeg','-v','error','-i',str(mixed),'-f','null','-'],capture_output=True,text=True)
+        assert decoded.returncode==0,decoded.stderr
+        print('PASS mixed 3-cut video export and ffmpeg decode:',mixed.name,mixed.stat().st_size)
     browser.close()
 finally:
  server.shutdown()
