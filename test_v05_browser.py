@@ -5,6 +5,7 @@ from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from threading import Thread
 from playwright.sync_api import sync_playwright
 import json
+import os
 import subprocess
 ROOT=Path(__file__).resolve().parent
 class Quiet(SimpleHTTPRequestHandler):
@@ -13,7 +14,8 @@ server=ThreadingHTTPServer(('127.0.0.1',0),partial(Quiet,directory=str(ROOT)))
 Thread(target=server.serve_forever,daemon=True).start()
 try:
  with sync_playwright() as p:
-    browser=p.chromium.launch(headless=True,args=['--no-sandbox','--disable-dev-shm-usage'])
+    engine=os.environ.get('PONPON_BROWSER','chromium')
+    browser=(p.webkit.launch(headless=True) if engine=='webkit' else p.chromium.launch(headless=True,args=['--no-sandbox','--disable-dev-shm-usage']))
     page=browser.new_page(viewport={'width':390,'height':844},accept_downloads=True)
     errors=[]
     page.on('pageerror', lambda e: errors.append(str(e)))
@@ -54,7 +56,7 @@ try:
     page.locator('[data-tab="preview"]').click()
     page.locator('#export-part').select_option(index=1)
     supports=page.evaluate('Boolean(mimeType())')
-    if supports:
+    if supports and engine=='chromium':
         with page.expect_download(timeout=25000) as export:
             page.locator('#record').click()
         video=ROOT/('v05-export'+Path(export.value.suggested_filename).suffix)
@@ -75,7 +77,7 @@ try:
       updateStats();
     }""")
     page.locator('#export-part').select_option('all')
-    if supports:
+    if supports and engine=='chromium':
         with page.expect_download(timeout=25000) as export:
             page.locator('#record').click()
         mixed=ROOT/('v05-mixed'+Path(export.value.suggested_filename).suffix)
