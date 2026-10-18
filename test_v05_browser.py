@@ -5,6 +5,7 @@ from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from threading import Thread
 from playwright.sync_api import sync_playwright
 import json
+import subprocess
 ROOT=Path(__file__).resolve().parent
 class Quiet(SimpleHTTPRequestHandler):
     def log_message(self,*args): pass
@@ -59,7 +60,9 @@ try:
         video=ROOT/('v05-export'+Path(export.value.suggested_filename).suffix)
         export.value.save_as(str(video))
         assert video.stat().st_size>2000
-        print('PASS browser video export:',video.name,video.stat().st_size)
+        decoded=subprocess.run(['ffmpeg','-v','error','-i',str(video),'-f','null','-'],capture_output=True,text=True)
+        assert decoded.returncode==0, decoded.stderr
+        print('PASS browser video export and ffmpeg decode:',video.name,video.stat().st_size)
     else:
         print('SKIP browser video export: MediaRecorder MIME unsupported')
     browser.close()
