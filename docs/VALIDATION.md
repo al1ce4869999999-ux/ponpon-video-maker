@@ -70,3 +70,12 @@ Draft PR作成や作業ブランチへの文書追記は本番公開ではない
 - `e0fbb10` はGitHubコミット検索で発見できず、内容の一致は証明できない。
 - 利用可能なLibraryに「拾われ待ちのたぬき、ぽんぽん.png」漫画作品画像は存在するが、独立した身体パーツ群であることは確認できず、正式なリグ品質受入には使用できない。
 - 検証手順と合否条件は [ACCEPTANCE_V05.md](ACCEPTANCE_V05.md) に固定した。
+
+## PNG素材登録・ポインタ移動の追加検証（2026-10-18）
+- [GitHub Actions #39105385282](https://github.com/al1ce4869999999-ux/ponpon-video-maker/actions/runs/39105385282): **success**。
+- 正常なPNGテスト画像を生成してリグのheadパーツへ登録し、画像データがstateに保存されたことを確認。
+- キャンバスを表示範囲へスクロールし、ポインタドラッグでheadの位置が変わることを確認。
+- Chromium/WebKitの両方で、リグ編集、画像登録、ポインタ、JSON復元のテストが成功。
+- Chromiumでは単体MP4（2,066,507 bytes）と混在3カットMP4（692,724 bytes）のFFmpegデコード成功。
+- WebKitではMediaRecorder MIME非対応のため録画はスキップ。
+- これはテスト用1px画像による機能検証で、正式ぽんぽん素材の外観品質や、iPhone実機の指タッチ/Files選択を保証しない。
