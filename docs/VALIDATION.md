@@ -55,3 +55,18 @@
 
 ## 安全ルール
 Draft PR作成や作業ブランチへの文書追記は本番公開ではない。検証未完了のIssueを閉じない。原本画像・既存保存データを上書き/削除しない。検証結果を「以前の報告」と「今回の実測」で混同しない。
+
+
+## WebKit互換性の追加検証（2026-10-18）
+- CI run [#39104982390](https://github.com/al1ce4869999999-ux/ponpon-video-maker/actions/runs/39104982390): 成功。
+- Linux上のPlaywright WebKit 26.0: リグ編集・うなずき再生・絵コンテ生成・JSON保存復元・ページエラーなしのテスト成功。
+- 同runのChromium: 単体MP4 2,041,501 bytes、混在3カットMP4 716,031 bytes。ともにFFmpegデコード成功。
+- **WebKit MediaRecorder: SKIP** (`MediaRecorder MIME unsupported`)。動画書き出し可能とは判定しない。
+- iPhone Safari実機で同じWebKit機能が動く保証はない。実機でMediaRecorder / canvas.captureStream / MP4を別途判定する。
+- フォールバックとして既存の静止画保存が残るが、静止画だけで動画書き出しの成功とはしない。
+
+## 素材と旧コミットの確認（2026-10-18）
+- GitHubに存在するブランチ: main / feat/v05-2d-rig / feat/ponpon-four-panel-mvp。
+- `e0fbb10` はGitHubコミット検索で発見できず、内容の一致は証明できない。
+- 利用可能なLibraryに「拾われ待ちのたぬき、ぽんぽん.png」漫画作品画像は存在するが、独立した身体パーツ群であることは確認できず、正式なリグ品質受入には使用できない。
+- 検証手順と合否条件は [ACCEPTANCE_V05.md](ACCEPTANCE_V05.md) に固定した。
