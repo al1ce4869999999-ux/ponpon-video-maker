@@ -6,6 +6,7 @@ from threading import Thread
 from playwright.sync_api import sync_playwright
 import json
 import os
+import base64
 import subprocess
 ROOT=Path(__file__).resolve().parent
 class Quiet(SimpleHTTPRequestHandler):
@@ -30,6 +31,21 @@ try:
     page.locator('[data-field="rotation"]').fill('17')
     page.locator('[data-field="rotation"]').dispatch_event('change')
     assert page.evaluate('state.rigs[0].parts.find(p=>p.id==="head").rotation')==17
+    # Register a tiny transparent test PNG (not character art).
+    png=ROOT/'v05-test-part.png'
+    png.write_bytes(base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y8d1TgAAAAASUVORK5CYII='))
+    page.locator('#rig-image').set_input_files(str(png))
+    page.wait_for_function('Boolean(state.rigs[0].parts.find(p=>p.id==="head").image)',timeout=8000)
+    # Exercise canvas pointer-based movement (same event handlers as touch).
+    canvas=page.locator('#rig-canvas')
+    bb=canvas.bounding_box()
+    x=bb['x']+bb['width']/2
+    y=bb['y']+bb['height']/2
+    page.mouse.move(x,y)
+    page.mouse.down()
+    page.mouse.move(x+15,y+10,steps=4)
+    page.mouse.up()
+    assert page.evaluate('state.rigs[0].parts.find(p=>p.id==="head").x')!=0
     page.locator('#rig-preview-motion').select_option('nod')
     page.get_by_role('button',name='モーション再生 / 停止').click()
     page.wait_for_timeout(120)
