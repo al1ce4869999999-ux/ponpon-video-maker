@@ -34,8 +34,16 @@
 - GitHub Actions #39104144405: **success**
 - Chromium画面からMP4録画・ダウンロード実行、約2.04MBの動画を取得。
 - FFmpegコマンドによるファイルの全デコードを実行し終了コード0を確認。
-- これは短い単一範囲の動画検証。混在3カットのMP4やiPhone Safariでの録画・共有は未確認。
+- これは短い単一範囲の動画検証。この時点では混在3カットのMP4やiPhone Safariでの録画・共有は未確認（下記で混在3カットを後続検証）。
 - URL: https://github.com/al1ce4869999999-ux/ponpon-video-maker/actions/runs/39104144405
+
+## 混在3カットMP4デコード実測（2026-10-18）
+- GitHub Actions #39104302579: **success**
+- `test_v05_browser.py` でリグ / 従来画像 / リグの混在3カット、wipe / fadeカット切替を設定。
+- ブラウザから `v05-mixed.mp4` (711,575 bytes) の出力とFFmpeg全デコード成功をログで確認。
+- 同CIで単一区間MP4 (2,052,151 bytes) の生成・FFmpeg全デコードも成功。
+- この試験のリグは未素材のテンプレート。正式ぽんぽん素材の視覚品質保証ではない。
+- URL: https://github.com/al1ce4869999999-ux/ponpon-video-maker/actions/runs/39104302579
 
 ## 公開の必須条件
 1. `e0fbb10` に相当する最終修正を回収するか、内容を特定して安全に再構築する。
