@@ -23,6 +23,13 @@
 - URL: https://github.com/al1ce4869999999-ux/ponpon-video-maker/actions/runs/39097826265
 - これはNodeベースの検証であり、Safari実機・ブラウザUI・動画ファイルのデコード品質までを証明するものではない。
 
+## モバイル幅ブラウザ実測（2026-10-18）
+- GitHub Actions run #39103887903: **success** (`regression` job)
+- 初期リグ作成、頭の回転数値編集、モーション再生・停止、文章解析から絵コンテ作成、リグ含むJSONの保存・復元、およびページエラーなしをChromiumの390x844ビューポートで確認。
+- このテストはAndroid/iOS Safariのブラウザ実機ではない。動画書き出しやデコード、メモリ上限は対象外。
+- 実行対象: `062f6249dc11e791ac2e68f824102f43da68934a`
+- https://github.com/al1ce4869999999-ux/ponpon-video-maker/actions/runs/39103887903
+
 ## 公開の必須条件
 1. `e0fbb10` に相当する最終修正を回収するか、内容を特定して安全に再構築する。
 2. 旧作品をバックアップから読み込み、改変・欠落なしの復元を確認。
