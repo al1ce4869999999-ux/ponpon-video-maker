@@ -6,7 +6,8 @@ from threading import Thread
 from playwright.sync_api import sync_playwright
 import json
 import os
-import base64
+import struct
+import zlib
 import subprocess
 ROOT=Path(__file__).resolve().parent
 class Quiet(SimpleHTTPRequestHandler):
@@ -33,7 +34,9 @@ try:
     assert page.evaluate('state.rigs[0].parts.find(p=>p.id==="head").rotation')==17
     # Register a tiny transparent test PNG (not character art).
     png=ROOT/'v05-test-part.png'
-    png.write_bytes(base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y8d1TgAAAAASUVORK5CYII='))
+    def chunk(tag,data):
+        return struct.pack('!I',len(data))+tag+data+struct.pack('!I',zlib.crc32(tag+data)&0xffffffff)
+    png.write_bytes(b'\\x89PNG\\r\\n\\x1a\\n'+chunk(b'IHDR',struct.pack('!2I5B',1,1,8,6,0,0,0))+chunk(b'IDAT',zlib.compress(b'\\x00\\xff\\x80\\x40\\xff'))+chunk(b'IEND',b''))
     page.locator('#rig-image').set_input_files(str(png))
     page.wait_for_function('Boolean(state.rigs[0].parts.find(p=>p.id==="head").image)',timeout=8000)
     # Exercise canvas pointer-based movement (same event handlers as touch).
