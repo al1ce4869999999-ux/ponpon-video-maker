@@ -16,6 +16,13 @@
 - `index.html`: 絵コンテ、プレビュー、作品保存、リグUI接続
 これは**コードの存在確認**であり、全機能の正常動作や映像品質を保証しない。
 
+## 今回実測した自動検証（2026-10-18）
+- GitHub Actions run #39097826265 (`v0.5 Rig Checks`): **success**
+- ジョブ `regression` 成功。構文チェックと `test_analyzer_v04.js`, `test_rig.js`, `test_renderer.js`, `test_motions.js`, `test_v05_regression.js` の実行ステップがすべて成功。
+- 実行対象のGitHubコミット: `d2ed9c8e241704f165588110c2fca369d405a901`
+- URL: https://github.com/al1ce4869999999-ux/ponpon-video-maker/actions/runs/39097826265
+- これはNodeベースの検証であり、Safari実機・ブラウザUI・動画ファイルのデコード品質までを証明するものではない。
+
 ## 公開の必須条件
 1. `e0fbb10` に相当する最終修正を回収するか、内容を特定して安全に再構築する。
 2. 旧作品をバックアップから読み込み、改変・欠落なしの復元を確認。
