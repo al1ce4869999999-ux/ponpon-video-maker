@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#f7f2e9">
+<title>ぽんぽん四コマ工房</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN",sans-serif;color:#332b26;background:#f7f2e9}
+*{box-sizing:border-box}body{margin:0}header{padding:17px max(16px,env(safe-area-inset-left));background:#fffaf3;border-bottom:1px solid #e5d8c9}
+h1{font-size:21px;margin:0}header p{margin:4px 0;font-size:12px;color:#766759}
+main{max-width:1100px;margin:auto;padding:16px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+article{background:#fffdf8;border:1px solid #e5d8c9;border-radius:17px;padding:17px;margin-bottom:14px}
+h2{font-size:17px;margin:0 0 12px}label{font-size:13px;font-weight:700;display:block;margin:9px 0 5px}
+input,textarea,select{width:100%;font:inherit;font-size:15px;background:white;border:1px solid #dacbb9;border-radius:9px;padding:10px;color:#332b26}
+textarea{min-height:150px;resize:vertical}button{font:inherit;border:none;background:#77533c;color:white;border-radius:10px;padding:11px 13px;font-weight:700;cursor:pointer}
+button.secondary{background:#eee3d5;color:#594537}button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid #cc9b73}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.note{font-size:12px;color:#776c62;line-height:1.7}
+.panels{display:grid;gap:13px}.panel{border:1px solid #e5d9ca;padding:12px;border-radius:12px;background:#fff}
+.panel strong{display:block;font-size:13px}.panel textarea{min-height:62px}.panel input{margin:0}
+.preview{width:100%;display:block;background:white;border:1px solid #d9cbbb;border-radius:10px;max-width:480px;margin:auto}
+.status{font-size:12px;min-height:20px;color:#77533c}.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(max-width:760px){main{grid-template-columns:1fr;padding:12px}article{padding:14px}.preview{max-width:440px}}
+</style></head><body>
+<header><h1>🐾 ぽんぽん四コマ工房</h1><p>文章から起承転結の下書きを作り、4コマを編集してPNG保存 · 無料 / 端末内処理</p></header>
+<main><section>
+<article><h2>① 物語を入れる</h2><label for="story">シーン本文</label><textarea id="story" placeholder="*ぽんぽんは大きな白菜を見つけた。*&#10;……これ、もらうでち。&#10;*抱えようとしたが、重くて持ち上がらない。*&#10;*ころんと後ろに転がった。*"></textarea>
+<div class="actions"><button id="create">起承転結を下書き</button><button class="secondary" id="sample">サンプル</button></div>
+<p class="note">段落の単純な四等分ではなく、発見・試み・失敗・結果の表現を手がかりに配置します。自動生成は編集用の下書きであり、意味理解や新しいポーズの画像生成ではありません。</p></article>
+<article><h2>② 正式画像を登録</h2><label for="image">キャラクター画像（外部送信なし）</label><input id="image" type="file" accept="image/png,image/jpeg,image/webp"><p class="note">透過PNG推奨。登録した画像をすべてのコマで再利用するため、元絵を崩しません。新しいポーズを描いたことにはなりません。</p>
+<div class="actions"><button class="secondary" id="clearImage">画像登録を解除</button></div></article>
+<article><h2>③ コマを仕上げる</h2><div class="panels" id="editors"></div></article>
+</section><section>
+<article><h2>④ 四コマを確認・保存</h2><canvas id="canvas" class="preview" width="840" height="1960" aria-label="四コマ漫画プレビュー"></canvas>
+<div class="actions"><button id="export">PNGを書き出す</button><button class="secondary" id="backup">JSONをバックアップ</button><button class="secondary" id="restore">JSONを読み込む</button><input id="jsonFile" type="file" accept="application/json" hidden></div>
+<p class="status" role="status" aria-live="polite" id="status"></p><p class="note">縦長四コマ（840×1960）。文字や登録画像をオフラインでCanvas描画。iPhoneでは保存したPNGを写真に追加できます。Safariの実機保存動作は未検証です。</p></article>
+</section></main>
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const roles=["起：状況を見せる","承：行動を始める","転：予想外の変化","結：結果・オチ"];
+const defaultPanels=()=>roles.map((_,i)=>({narration:"",speech:"",zoom:i===2?1.14:1,shiftX:0,shiftY:0}));
+let panels=defaultPanels(), character=null, imageData=null;
+const patterns=[
+ /転ん|ころん|落ち|失敗|できな|持ち上がら|ぶつか|破れ|壊れ|滑っ|ひっくり|飛び出|こぼれ|引っかか/,
+ /ところが|しかし|なのに|けれど|突然|そのとき|まさか|あれ[？?]|えっ|びっくり|びくっ/,
+ /拾っ|見つけ|気づ|見上げ|眺め|あった|いた|歩い|入っ|出会っ/,
+ /しよう|し始め|手を伸ば|抱え|持っ|走っ|近づ|奪っ|取ろう|登ろう|引っ張/,
+ /結局|とうとう|やっぱり|最後|そのまま|しょんぼり|泣き|笑っ|帰っ|諦め|動けなく/
+];
+function blocks(text){
+ return text.replace(/\r/g,"").split(/\n+/).map(s=>s.trim().replace(/^\*|\*$/g,"")).filter(Boolean).flatMap(s=>s.length>95?(s.match(/.{1,85}(?:[。！？]|$)/g)||[s]):[s]).slice(0,100);
+}
+function roleScore(s,idx,total){
+ const score=[0,0,0,0],p=idx/Math.max(1,total-1);
+ score[0]=2.2*(1-p);score[1]=1.2*(1-Math.abs(p-.35));score[2]=1.2*(1-Math.abs(p-.68));score[3]=2.1*p;
+ if(patterns[0].test(s)){score[2]+=4;score[3]+=.8}
+ if(patterns[1].test(s))score[2]+=3;
+ if(patterns[2].test(s))score[0]+=2;
+ if(patterns[3].test(s))score[1]+=2;
+ if(patterns[4].test(s))score[3]+=3;
+ if(/[！？!?]/.test(s))score[2]+=.3;
+ return score;
+}
+function draft(text){
+ const b=blocks(text);if(!b.length)return defaultPanels();
+ const scores=b.map((s,i)=>roleScore(s,i,b.length));
+ // Sequence-constrained segmentation: each beat stays in original order.
+ let dp=Array.from({length:b.length+1},()=>Array(5).fill(-Infinity)),back=Array.from({length:b.length+1},()=>Array(5).fill(null));
+ dp[0][0]=0;
+ for(let i=0;i<b.length;i++)for(let k=0;k<4;k++)if(Number.isFinite(dp[i][k])){
+   for(const to of [k,Math.min(k+1,3)]){
+     if(to<k)continue;
+     const value=dp[i][k]+scores[i][to]-(to===k?0:.1);
+     if(value>dp[i+1][to+1]){dp[i+1][to+1]=value;back[i+1][to+1]={prev:k,role:to}}
+   }
+ }
+ // For short scenes, distribute chronologically. Otherwise pick high-scoring representative beats.
+ const indexes=[];
+ for(let k=0;k<4;k++){
+  let best=-Infinity,at=-1;
+  for(let i=0;i<b.length;i++){const target=k*(b.length-1)/3;const value=scores[i][k]-Math.abs(i-target)*.45;if(value>best){best=value;at=i}}
+  indexes.push(at);
+ }
+ const cuts=[[],[],[],[]];let last=0;
+ for(let i=0;i<b.length;i++){
+   let bestRole=0,bestValue=-Infinity;
+   for(let k=last;k<4;k++){
+     const center=indexes[k];const score=scores[i][k]-Math.abs(i-center)*.6-(k-last)*.12;
+     if(score>bestValue){bestValue=score;bestRole=k}
+   }
+   // Keep the conclusion populated when possible.
+   if(i===b.length-1 && b.length>=4)bestRole=3;
+   cuts[bestRole].push(b[i]);last=bestRole;
+ }
+ const result=defaultPanels();
+ for(let k=0;k<4;k++){
+  const seg=cuts[k];
+  const speech=seg.filter(s=>!/[。]/.test(s)&&s.length<55&&(!/^[*]/.test(s)));
+  result[k].speech=(speech.find(s=>/[！？!?…]|でち|だよ|です|なの/.test(s))||"").slice(0,85);
+  result[k].narration=seg.filter(s=>s!==result[k].speech).join(" ").slice(0,180);
+ }
+ return result;
+}
+function editor(){
+ const root=$("editors");root.replaceChildren();
+ panels.forEach((p,i)=>{
+  const el=document.createElement("div");el.className="panel";
+  const title=document.createElement("strong");title.textContent=(i+1)+"コマ目 · "+roles[i];el.append(title);
+  for(const [key,label,type] of [["narration","状況・動作","textarea"],["speech","吹き出し","textarea"],["zoom","画像拡大率","number"],["shiftX","横位置（-100〜100）","number"],["shiftY","縦位置（-100〜100）","number"]]){
+   const lab=document.createElement("label");lab.textContent=label;const input=document.createElement(type);
+   input.value=p[key];input.setAttribute("aria-label",roles[i]+" "+label);
+   if(type==="textarea")input.rows=2;
+   else {input.step=key==="zoom"?.05:5;input.min=key==="zoom"?.5:-100;input.max=key==="zoom"?2:100}
+   input.addEventListener("input",()=>{p[key]=type==="number"?Number(input.value)||0:input.value;draw()});el.append(lab,input);
+  }
+  root.append(el);
+ });
+}
+function wrap(ctx,s,maxWidth,maxLines){
+ const result=[];let line="";
+ for(const ch of [...String(s||"")]){
+  if(ch==="\n"){result.push(line);line="";continue}
+  if(ctx.measureText(line+ch).width>maxWidth && line){result.push(line);line=ch}else line+=ch;
+ }
+ if(line)result.push(line);
+ if(result.length>maxLines){result.length=maxLines;result[maxLines-1]=result[maxLines-1].slice(0,-1)+"…"}
+ return result;
+}
+function draw(){
+ const c=$("canvas"),ctx=c.getContext("2d");if(!ctx)return;
+ ctx.clearRect(0,0,c.width,c.height);ctx.fillStyle="#fffdf8";ctx.fillRect(0,0,840,1960);
+ const W=776,H=448;
+ panels.forEach((p,i)=>{
+  const x=32,y=30+i*480;
+  ctx.save();ctx.fillStyle=i===3?"#f7eddf":"#faf6ee";ctx.fillRect(x,y,W,H);
+  ctx.beginPath();ctx.rect(x+3,y+3,W-6,H-6);ctx.clip();
+  if(character){
+   const zoom=Math.max(.5,Math.min(2,Number(p.zoom)||1));
+   const scale=Math.min(540/character.width,320/character.height)*zoom;
+   const w=character.width*scale,h=character.height*scale;
+   ctx.drawImage(character,x+W/2-w/2+(Number(p.shiftX)||0)*2,y+220-h/2+(Number(p.shiftY)||0)*2,w,h);
+  }else{
+   ctx.fillStyle="#ded0bf";ctx.font="24px sans-serif";ctx.textAlign="center";
+   ctx.fillText("ここにキャラクターの正式画像",x+W/2,y+215);
+  }
+  if(p.narration){
+   ctx.fillStyle="#fffdfaee";ctx.fillRect(x+15,y+10,W-30,90);
+   ctx.fillStyle="#312b24";ctx.font="25px sans-serif";ctx.textAlign="left";
+   wrap(ctx,p.narration,W-65,2).forEach((line,j)=>ctx.fillText(line,x+30,y+44+j*32));
+  }
+  if(p.speech){
+   ctx.font="bold 27px sans-serif";const lines=wrap(ctx,p.speech,315,3),bubbleWidth=356,bubbleHeight=30+lines.length*36;
+   const bx=x+W-bubbleWidth-15,by=y+H-bubbleHeight-20;
+   ctx.fillStyle="#fff";ctx.strokeStyle="#332b26";ctx.lineWidth=3;
+   ctx.beginPath();ctx.roundRect(bx,by,bubbleWidth,bubbleHeight,24);ctx.fill();ctx.stroke();
+   ctx.fillStyle="#332b26";ctx.textAlign="center";
+   lines.forEach((line,j)=>ctx.fillText(line,bx+bubbleWidth/2,by+39+j*36));
+  }
+  ctx.restore();ctx.strokeStyle="#302923";ctx.lineWidth=5;ctx.strokeRect(x,y,W,H);
+  ctx.fillStyle="#6b5443";ctx.font="bold 21px sans-serif";ctx.textAlign="left";ctx.fillText(String(i+1),x+11,y+H-13);
+ });
+}
+function notice(s){$("status").textContent=s}
+function download(blob,name){
+ const a=document.createElement("a");const url=URL.createObjectURL(blob);a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+$("create").onclick=()=>{panels=draft($("story").value);editor();draw();notice("起承転結の下書きを作りました。内容とポーズは確認・編集してください。")};
+$("sample").onclick=()=>{$("story").value="*ぽんぽんは道端に大きな白菜を見つけた。*\n……これ、ぼくの！\n*両手で抱えて持ち上げようとした。*\n*ところが、白菜は重くてびくともしない。*\n……あれ？\n*踏ん張った足が滑り、ぽんぽんはころんと尻もちをついた。*\n*白菜だけがころころ坂を転がっていった。*\n……まってぇ！";$("create").click()};
+$("image").onchange=async e=>{
+ const file=e.target.files?.[0];if(!file)return;
+ if(!/^image\/(png|jpeg|webp)$/.test(file.type)||file.size>12e6){notice("PNG/JPEG/WebPの12MB以下の画像を選んでください。");return}
+ const reader=new FileReader();
+ reader.onload=()=>{const img=new Image();img.onload=()=>{character=img;imageData=reader.result;draw();notice("画像を端末内で登録しました。")};img.onerror=()=>notice("画像を読み込めませんでした。");img.src=reader.result};reader.readAsDataURL(file);
+};
+$("clearImage").onclick=()=>{character=null;imageData=null;$("image").value="";draw();notice("画面上の画像登録を解除しました。")};
+$("export").onclick=()=>{$("canvas").toBlob(blob=>{if(blob){download(blob,"ponpon-four-panel.png");notice("PNGの保存を開始しました。")}else notice("画像の書き出しに失敗しました。")},"image/png")};
+$("backup").onclick=()=>{download(new Blob([JSON.stringify({version:1,story:$("story").value,panels,imageData},null,2)],{type:"application/json"}),"ponpon-four-panel.json");notice("バックアップを書き出しました。")};
+$("restore").onclick=()=>$("jsonFile").click();
+$("jsonFile").onchange=async e=>{
+ const f=e.target.files?.[0];if(!f)return;
+ if(f.size>16e6){notice("JSONが大きすぎます。");return}
+ try{
+  const data=JSON.parse(await f.text());
+  if(data.version!==1||!Array.isArray(data.panels)||data.panels.length!==4)throw Error("形式が違います");
+  panels=data.panels.map((p,i)=>({...defaultPanels()[i],narration:String(p.narration||"").slice(0,180),speech:String(p.speech||"").slice(0,85),zoom:Number(p.zoom)||1,shiftX:Number(p.shiftX)||0,shiftY:Number(p.shiftY)||0}));
+  $("story").value=String(data.story||"");
+  character=null;imageData=null;
+  if(typeof data.imageData==="string"&&/^data:image\/(png|jpeg|webp);base64,/.test(data.imageData)){
+   const img=new Image();img.onload=()=>{character=img;imageData=data.imageData;draw()};img.src=data.imageData;
+  }
+  editor();draw();notice("バックアップを復元しました。");
+ }catch(err){notice("読み込み失敗："+err.message)}finally{e.target.value=""}
+};
+editor();draw();
+</script></body></html>
