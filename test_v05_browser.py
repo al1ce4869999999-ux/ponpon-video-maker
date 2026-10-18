@@ -41,6 +41,7 @@ try:
     page.wait_for_function('Boolean(state.rigs[0].parts.find(p=>p.id==="head").image)',timeout=8000)
     # Exercise canvas pointer-based movement (same event handlers as touch).
     canvas=page.locator('#rig-canvas')
+    canvas.scroll_into_view_if_needed()
     bb=canvas.bounding_box()
     x=bb['x']+bb['width']/2
     y=bb['y']+bb['height']/2
