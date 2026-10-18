@@ -36,7 +36,7 @@ try:
     png=ROOT/'v05-test-part.png'
     def chunk(tag,data):
         return struct.pack('!I',len(data))+tag+data+struct.pack('!I',zlib.crc32(tag+data)&0xffffffff)
-    png.write_bytes(b'\\x89PNG\\r\\n\\x1a\\n'+chunk(b'IHDR',struct.pack('!2I5B',1,1,8,6,0,0,0))+chunk(b'IDAT',zlib.compress(b'\\x00\\xff\\x80\\x40\\xff'))+chunk(b'IEND',b''))
+    png.write_bytes(b'\x89PNG\r\n\x1a\n'+chunk(b'IHDR',struct.pack('!2I5B',1,1,8,6,0,0,0))+chunk(b'IDAT',zlib.compress(b'\x00\xff\x80\x40\xff'))+chunk(b'IEND',b''))
     page.locator('#rig-image').set_input_files(str(png))
     page.wait_for_function('Boolean(state.rigs[0].parts.find(p=>p.id==="head").image)',timeout=8000)
     # Exercise canvas pointer-based movement (same event handlers as touch).
