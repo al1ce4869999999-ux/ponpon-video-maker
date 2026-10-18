@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ponpon Studio Safari 診断</title>
+<style>body{font:16px/1.6 -apple-system,sans-serif;background:#f7f2e9;color:#2d2923;margin:0;padding:18px;max-width:700px}button,input{font:inherit;padding:10px;margin:5px 0}button{background:#76523f;color:white;border:0;border-radius:9px}canvas{width:100%;max-width:340px;background:#ead9c5;touch-action:none;border:2px solid #76523f}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:white;padding:12px;border-radius:8px}h1{font-size:22px}small{display:block}</style>
+<h1>ぽんぽん v0.5 · iPhone Safari 診断</h1>
+<p>検証専用ページ。画像・ログは外部送信しません。既存の作品や保存データは変更しません。</p>
+<button id="check">① 機能を診断</button>
+<label>② テスト画像を選択 <input id="file" type="file" accept="image/png,image/webp,image/jpeg"></label>
+<p>③ 四角を指で横に動かす</p>
+<canvas id="canvas" width="340" height="220"></canvas>
+<div><button id="record">④ 2秒の動画録画を試す</button><button id="copy">診断ログをコピー</button></div>
+<p id="status" role="status"></p>
+<pre id="output"></pre>
+<script>
+(()=>{'use strict';
+const $=id=>document.getElementById(id),canvas=$('canvas'),ctx=canvas.getContext('2d');
+const log={ua:navigator.userAgent,at:new Date().toISOString()},samples=[];
+let pos=70,drag=null,videoUrl=null;
+function paint(){ctx.clearRect(0,0,340,220);ctx.fillStyle='#a87654';ctx.fillRect(pos,90,60,60);ctx.fillStyle='#ffffff';ctx.font='16px sans-serif';ctx.fillText('PONPON',10,24)}
+function show(){log.dragSamples=samples.length;$('output').textContent=JSON.stringify(log,null,2)}
+function report(x){Object.assign(log,x);show()}
+function supports(){const choices=['video/mp4;codecs=avc1.42E01E','video/mp4','video/webm;codecs=vp8','video/webm'];return {mediaRecorder:typeof MediaRecorder!=='undefined',captureStream:typeof canvas.captureStream==='function',mimes:typeof MediaRecorder==='undefined'?[]:choices.filter(t=>MediaRecorder.isTypeSupported(t)),toBlob:typeof canvas.toBlob==='function',indexedDB:typeof indexedDB!=='undefined',share:typeof navigator.share==='function',canShare:typeof navigator.canShare==='function',platform:navigator.platform}}
+$('check').onclick=()=>{report(supports());$('status').textContent='機能診断が完了しました'};
+$('file').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;try{const bitmap=await createImageBitmap(f);report({image:{type:f.type,bytes:f.size,width:bitmap.width,height:bitmap.height,result:'success'}});bitmap.close?.();$('status').textContent='画像読込成功'}catch(err){report({image:{result:'failure',error:String(err)}})}};
+canvas.onpointerdown=e=>{drag={id:e.pointerId,start:e.clientX,origin:pos};canvas.setPointerCapture(e.pointerId)};
+canvas.onpointermove=e=>{if(!drag||e.pointerId!==drag.id)return;pos=Math.max(0,Math.min(280,drag.origin+(e.clientX-drag.start)*340/canvas.getBoundingClientRect().width));samples.push(pos);paint();show()};
+canvas.onpointerup=canvas.onpointercancel=()=>{if(drag)report({pointer:{moved:samples.length>0,position:Math.round(pos)}});drag=null};
+$('record').onclick=async()=>{
+const caps=supports();report(caps);const mime=caps.mimes[0];if(!mime||!caps.captureStream){report({record:{result:'unsupported'}});$('status').textContent='この環境ではCanvas録画に非対応';return}
+let stream,rec;try{stream=canvas.captureStream(12);rec=new MediaRecorder(stream,{mimeType:mime});const chunks=[];rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};rec.onerror=e=>{report({record:{result:'error',error:e.error?.message||'MediaRecorder error'}})};
+rec.onstop=()=>{stream.getTracks().forEach(t=>t.stop());const blob=new Blob(chunks,{type:mime});if(videoUrl)URL.revokeObjectURL(videoUrl);videoUrl=URL.createObjectURL(blob);const a=document.createElement('a');a.href=videoUrl;a.download='ponpon-safari-test.'+(mime.includes('mp4')?'mp4':'webm');a.textContent='テスト動画を端末に保存';a.style.display='block';$('status').replaceChildren(a);report({record:{result:blob.size?'created':'empty',bytes:blob.size,mime}})};
+rec.start();$('status').textContent='録画中（2秒）';let start=performance.now();const tick=now=>{pos=70+Math.sin((now-start)/250)*45;paint();if(now-start<2000&&rec.state==='recording')requestAnimationFrame(tick);else if(rec.state==='recording')rec.stop()};requestAnimationFrame(tick)
+}catch(err){stream?.getTracks().forEach(t=>t.stop());report({record:{result:'exception',error:String(err)}})}
+};
+$('copy').onclick=()=>{const text=$('output').textContent;if(navigator.clipboard?.writeText)navigator.clipboard.writeText(text).then(()=>$('status').textContent='ログをコピーしました').catch(()=>$('status').textContent='コピー不可。ログを選択してコピーしてください');else $('status').textContent='ログを選択してコピーしてください'};
+paint();report(supports());
+})();
+</script></html>
