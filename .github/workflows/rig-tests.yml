@@ -1,0 +1,58 @@
+name: v0.5 Rig Checks
+on:
+  pull_request:
+    paths:
+      - 'rig.js'
+      - 'renderer.js'
+      - 'rig-editor.js'
+      - 'motion-presets.js'
+      - 'storage.js'
+      - 'index.html'
+      - 'analyzer.js'
+      - 'test_*.js'
+      - 'test_v05_browser.py'
+      - 'test_safari_diagnostics.py'
+      - 'safari-diagnostics.html'
+      - '.github/workflows/rig-tests.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax check
+        run: |
+          node --check rig.js
+          node --check renderer.js
+          node --check rig-editor.js
+          node --check motion-presets.js
+          node --check storage.js
+      - name: Existing analysis and rig regression
+        run: |
+          node test_analyzer_v04.js
+          node test_rig.js
+          node test_renderer.js
+          node test_motions.js
+          node test_v05_regression.js
+      - name: Install browser test dependencies
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          python -m pip install playwright==1.56.0
+          python -m playwright install --with-deps chromium webkit
+      - name: Browser smoke test on mobile viewport
+        run: python test_v05_browser.py
+      - name: WebKit mobile viewport smoke test
+        env:
+          PONPON_BROWSER: webkit
+        run: python test_v05_browser.py
+      - name: Safari diagnostic Chromium
+        run: python test_safari_diagnostics.py
+      - name: Safari diagnostic WebKit
+        env:
+          PONPON_BROWSER: webkit
+        run: python test_safari_diagnostics.py
