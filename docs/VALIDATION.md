@@ -30,6 +30,13 @@
 - 実行対象: `062f6249dc11e791ac2e68f824102f43da68934a`
 - https://github.com/al1ce4869999999-ux/ponpon-video-maker/actions/runs/39103887903
 
+## 動画ファイル生成・デコード実測（2026-10-18）
+- GitHub Actions #39104144405: **success**
+- Chromium画面からMP4録画・ダウンロード実行、約2.04MBの動画を取得。
+- FFmpegコマンドによるファイルの全デコードを実行し終了コード0を確認。
+- これは短い単一範囲の動画検証。混在3カットのMP4やiPhone Safariでの録画・共有は未確認。
+- URL: https://github.com/al1ce4869999999-ux/ponpon-video-maker/actions/runs/39104144405
+
 ## 公開の必須条件
 1. `e0fbb10` に相当する最終修正を回収するか、内容を特定して安全に再構築する。
 2. 旧作品をバックアップから読み込み、改変・欠落なしの復元を確認。
