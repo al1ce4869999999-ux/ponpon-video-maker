@@ -47,6 +47,21 @@ try:
     assert page.evaluate('state.rigs[0].parts.find(p=>p.id==="head").rotation')==17
     assert not errors,errors
     print('PASS browser: rig edit, nod preview, scene analysis, JSON roundtrip, no page errors')
+    # Export the shortest available segment; format is negotiated by Chromium.
+    page.locator('[data-tab="storyboard"]').click()
+    page.locator('.cut').first.locator('[data-edit="duration"]').select_option('2')
+    page.locator('[data-tab="preview"]').click()
+    page.locator('#export-part').select_option(index=1)
+    supports=page.evaluate('Boolean(mimeType())')
+    if supports:
+        with page.expect_download(timeout=25000) as export:
+            page.locator('#record').click()
+        video=ROOT/('v05-export'+Path(export.value.suggested_filename).suffix)
+        export.value.save_as(str(video))
+        assert video.stat().st_size>2000
+        print('PASS browser video export:',video.name,video.stat().st_size)
+    else:
+        print('SKIP browser video export: MediaRecorder MIME unsupported')
     browser.close()
 finally:
  server.shutdown()
